@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
@@ -44,25 +43,26 @@ class QuotesListFragment : Fragment() {
         recyclerQuotesList.setHasFixedSize(true)
 
         var name = arguments?.getString("MySearh") ?: "Naruto"
-        if(name.isEmpty()) name = "Naruto"
+        if (name.isEmpty()) name = "Naruto"
 
-
-        Log.d("Zlulu", "$name")
+        Log.d("Zlulu", name)
         getQuotesByTitle(name)
-//        getAllQuotesList()
 
-        activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val fragment = InputFragment()
-                val fragmentTransaction: FragmentTransaction = parentFragmentManager.beginTransaction()
-                fragmentTransaction.addToBackStack(null)
-                .replace(R.id.fragment_container_view, fragment)
-                .commit()
-            }
-        })
+        activity?.onBackPressedDispatcher?.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    val fragment = InputFragment()
+                    val fragmentTransaction: FragmentTransaction =
+                        parentFragmentManager.beginTransaction()
+                    fragmentTransaction.addToBackStack(null)
+                        .replace(R.id.fragment_container_view, fragment)
+                        .commit()
+                }
+            })
     }
 
-    private fun getAllQuotesList() {
+    private fun getRandomQuotesList() {
         mService.getRandomQuotes().enqueue(object : Callback<ArrayList<Quote>> {
             override fun onFailure(call: Call<ArrayList<Quote>>, t: Throwable) {
 
@@ -72,21 +72,13 @@ class QuotesListFragment : Fragment() {
                 call: Call<ArrayList<Quote>>,
                 response: Response<ArrayList<Quote>>
             ) {
-
-                val quotesList = response.body() as ArrayList<Quote>
-                adapter = MyQuotesAdapter(this, response.body() as ArrayList<Quote>)
-                adapter.notifyDataSetChanged()
-                recyclerQuotesList.adapter = adapter
-
-                quotesList.forEach{
-                    Log.d("Quote", it.quote)
-                }
+                showQuotes(response.body() as ArrayList<Quote>, this)
             }
         })
     }
 
 
-    private fun getQuotesByTitle(name: String){
+    private fun getQuotesByTitle(name: String) {
 
         mService.getQuotesByTitle(name).enqueue(object : Callback<ArrayList<Quote>> {
             override fun onFailure(call: Call<ArrayList<Quote>>, t: Throwable) {
@@ -97,21 +89,23 @@ class QuotesListFragment : Fragment() {
                 call: Call<ArrayList<Quote>>,
                 response: Response<ArrayList<Quote>>
             ) {
-
-                if(response.code() == 404){
-                    Log.d("404","nothing found")
+                if (response.code() != 200) {
+                    Log.d("404", "nothing found")
+                    getRandomQuotesList()
                     return
                 }
-                Log.d("RESPONCE", "$response.body()")
-                val quotesList = response.body() as ArrayList<Quote>
-                adapter = MyQuotesAdapter(this, response.body() as ArrayList<Quote>)
-                adapter.notifyDataSetChanged()
-                recyclerQuotesList.adapter = adapter
-
-                quotesList.forEach{
-                    Log.d("Quote", it.quote)
-                }
+                showQuotes(response.body() as ArrayList<Quote>, this)
             }
         })
+    }
+
+
+    private fun showQuotes(quotesList: ArrayList<Quote>, context: Callback<ArrayList<Quote>>) {
+        adapter = MyQuotesAdapter(context, quotesList)
+        adapter.notifyDataSetChanged()
+        recyclerQuotesList.adapter = adapter
+        quotesList.forEach {
+            Log.d("Quote", it.quote)
+        }
     }
 }
